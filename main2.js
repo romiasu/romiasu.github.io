@@ -33,6 +33,9 @@ var ASSETS = {
     'nishizono_face' : './images/nishizono_face.png',
     'collisioneffect1' : './images/attackeffect.png',
     'collisioneffect2' : './images/attackeffect2.png',
+    'instruction1' : './images/instruction.png',
+    'instruction2' : './images/instruction2.png',
+    'credits' : './images/credits.png',
   },
   sound: {
     'konnyara' : "./sounds/konnyara.mp3",
@@ -106,14 +109,47 @@ phina.define('TitleScene', {
       shadowBlur: 10,
     }).addChildTo(this).setPosition(this.gridX.center(8) + 1000, this.gridY.center(5));
 
+    this.credits_image = Sprite('credits').addChildTo(this).setPosition(this.gridX.center(), this.gridY.center()).setScale(0.7, 0.0).hide();
+
     this.title_label.setInteractive(true);
     this.start_label.setInteractive(true);
     this.howtoplay_label.setInteractive(true);
     this.credits_label.setInteractive(true);
+    this.credits_image.setInteractive(true);
 
     this.start_label.onpointend = () => {
       SoundManager.play('select');
       this.exit();
+    };
+
+    this.howtoplay_label.onpointend = () => {
+      SoundManager.play('select');
+      this.exit('instruction');
+    };
+
+    this.credits_label.onpointend = () => {
+      SoundManager.play('select');
+      this.title_label.setInteractive(false);
+      this.start_label.setInteractive(false);
+      this.howtoplay_label.setInteractive(false);
+      this.credits_label.setInteractive(false);
+      this.credits_image.show();
+      this.credits_image.tweener.clear()
+      .to({scaleY: 0.7}, 500)
+      .play();
+    };
+
+    this.credits_image.onpointend = () => {
+      this.title_label.setInteractive(true);
+      this.start_label.setInteractive(true);
+      this.howtoplay_label.setInteractive(true);
+      this.credits_label.setInteractive(true);
+      this.credits_image.tweener.clear()
+      .to({scaleY: 0.0}, 500)
+      .call(function() {
+        this.target.hide();
+      })
+      .play();
     };
 
     this.title_label.tweener.clear()
@@ -135,6 +171,46 @@ phina.define('TitleScene', {
     //this.on('pointend', function() {
     //  this.exit();
     //});
+  },
+});
+
+phina.define('InstructionScene', {
+  superClass: 'DisplayScene',
+  init: function() {
+    this.superInit({
+      width: SCREEN_WIDTH,
+      height: SCREEN_HEIGHT,
+    });
+    let bg = DisplayElement().addChildTo(this);
+    Sprite('title_bg').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+    this.page1 = Sprite('instruction1').addChildTo(this).setPosition(this.gridX.center(), this.gridY.center()).setSize(SCREEN_WIDTH, SCREEN_HEIGHT);
+    this.page2 = Sprite('instruction2').addChildTo(this).setPosition(this.gridX.center(), this.gridY.center()).setSize(SCREEN_WIDTH, SCREEN_HEIGHT).hide();
+    this.text_label = Label({
+      text: 'Next Page->',
+      fontWeight: "bold",
+      fontFamile: "'Monaco', 'Consolas', 'MS 明朝'",
+      fontSize: 32,
+      fill: 'red',
+    }).addChildTo(this).setPosition(this.gridX.center(-4), this.gridY.center(6));;
+
+    this.page_number = 1;
+  },
+
+  onpointend: function() {
+    switch (this.page_number) {
+      case 1:
+        this.page1.hide();
+        this.page2.show();
+        this.text_label.text = 'Back to Title';
+        this.text_label.setPosition(this.gridX.center(6), this.gridY.center(6));
+        this.page_number++;
+        break;
+      case 2:
+        this.exit();
+        break;
+      default:
+        break;
+    }
   },
 });
 
@@ -871,6 +947,11 @@ phina.main(function() {
       className: 'TitleScene',
       label: 'title',
       nextLabel: 'game',
+    },
+    {
+      className: 'InstructionScene',
+      label: 'instruction',
+      nextLabel: 'title',
     },
     {
       className: 'MainScene',
