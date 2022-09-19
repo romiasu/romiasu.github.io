@@ -1,0 +1,666 @@
+<!doctype html>
+
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <title>ミラ・クズス</title>
+  </head>
+  <body>
+  </body>
+</html>
+
+<style>
+canvas {
+  box-shadow: 0px 0px 4px 0px #aaa;
+}
+</style>
+
+<script src="https://cdn.jsdelivr.net/gh/phi-jp/phina.js@0.2.3/build/phina.js"></script>
+<script src="block_pos.js"></script>
+<script>
+//本ソースコードはPhina.js本家様のサンプルを元に開発しました。
+// https://runstant.com/phi/projects/phinajs_examples_breakout
+
+phina.globalize();
+
+var ASSETS = {
+  image: {
+    'mira_cloth' : "./mira_cloth_resize.png",
+    'mira_shame' : "./mira_shame_resize.png",
+    'mira_smile' : "./mira_smile_resize.png",
+    'mira_shobon' : "./mira_shobon.png",
+  },
+};
+
+var SCREEN_WIDTH    = 640;
+var SCREEN_HEIGHT   = 960;
+var MAX_PER_LINE    = 16;
+var BLOCK_NUM       = MAX_PER_LINE*20;
+var BLOCK_SIZE      = 32;
+var BOARD_PADDING   = 50;
+var PADDLE_WIDTH    = 150;
+var PADDLE_HEIGHT   = 32;
+var BALL_RADIUS     = 16;
+var BALL_SPEED      = 16;
+var MAX_BALL_SPEED  = 24;
+
+var BOARD_SIZE      = SCREEN_WIDTH - BOARD_PADDING*2;
+var BOARD_OFFSET_X  = BOARD_PADDING+BLOCK_SIZE/2;
+var BOARD_OFFSET_Y  = 150;
+
+phina.define("MainScene", {
+  superClass: 'DisplayScene',
+
+  init: function(options) {
+    this.superInit(options);
+
+
+    // スコアラベル
+    this.scoreLabel = Label('0').addChildTo(this);
+    this.scoreLabel.x = this.gridX.center(6);
+    this.scoreLabel.y = this.gridY.span(1);
+    this.scoreLabel.fill = 'white';
+    this.scoreLabel.hide();
+
+    var gridX = Grid(BLOCK_SIZE * MAX_PER_LINE, MAX_PER_LINE);
+    var gridY = Grid(BLOCK_SIZE * MAX_PER_LINE, MAX_PER_LINE);
+    this.mira_shame = Sprite('mira_shame').addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
+    this.mira_shame.hide();
+    this.mira_smile = Sprite('mira_smile').addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
+
+    // グループ
+    this.group = DisplayElement().addChildTo(this);
+
+    /*
+    var gridX = Grid(BOARD_SIZE, MAX_PER_LINE);
+    var gridY = Grid(BOARD_SIZE, MAX_PER_LINE);
+    */
+
+    var self = this;
+
+    (BLOCK_NUM).times(function(i) {
+      // グリッド上でのインデックス
+      var xIndex = i%MAX_PER_LINE;
+      var yIndex = Math.floor(i/MAX_PER_LINE);
+      var angle = (360)/BLOCK_NUM*i;
+      let tx = gridX.span(xIndex) + BOARD_OFFSET_X;
+      let ty = gridY.span(yIndex)+BOARD_OFFSET_Y;
+      //var block = Block(angle).addChildTo(this.group).setPosition(100, 100);
+      var block = ImageBlock(tx, ty, this.gridX.center(), this.gridY.center()).addChildTo(this.group).setPosition(100, 100);
+
+      block.x = tx;
+      block.y = ty;
+
+      if (!block.check_visible()) {
+        block.remove();
+      }
+    }, this);
+    this.initial_block_num = this.group.children.length;
+
+    // ボール
+    this.ball = Ball().addChildTo(this);
+
+    // パドル
+    this.paddle = Paddle().addChildTo(this);
+    this.paddle.setPosition(this.gridX.center(), this.gridY.span(15));
+    this.paddle.hold(this.ball);
+
+    // タッチでゲーム開始
+    this.ballSpeed = 0;
+    this.one('pointend', function() {
+      this.paddle.release();
+      this.ballSpeed = BALL_SPEED;
+    });
+
+    // スコア
+    this.score = 0;
+    // 時間
+    this.time = 0;
+    // コンボ
+    this.combo = 0;
+  },
+
+  update: function(app) {
+    // タイムを加算
+    this.time += app.deltaTime;
+
+    // パドル移動
+    this.paddle.x = app.pointer.x;
+    if (this.paddle.left < 0) {
+      this.paddle.left = 0;
+    }
+    if (this.paddle.right > this.gridX.width) {
+      this.paddle.right = this.gridX.width;
+    }
+
+    // スピードの数分, 移動と衝突判定を繰り返す
+    (this.ballSpeed).times(function() {
+      this.ball.move();
+      this.checkHit();
+    }, this);
+
+    // ブロックがすべてなくなったらクリア
+    //if (this.group.children.length <= 0) {
+    if (this.group.children.length < (0.5 * this.initial_block_num)) {
+      this.mira_smile.hide();
+      this.mira_shame.show();
+    }
+    if (this.group.children.length <= (0.05 * this.initial_block_num)) {
+      this.gameclear();
+    }
+  },
+
+  checkHit: function() {
+    //
+    var ball = this.ball;
+
+    // 画面外対応
+    if (ball.left < 0) {
+      ball.left = 0;
+      ball.reflectX();
+    }
+    if (ball.right > this.gridX.width) {
+      ball.right = this.gridX.width
+      ball.reflectX();
+    }
+    if (ball.top < 0) {
+      ball.top = 0;
+      ball.reflectY();
+    }
+    if (ball.bottom > this.gridY.width) {
+      ball.bottom = this.gridY.width
+      ball.reflectY();
+      this.gameover(0);
+    }
+
+    // ボールとパドル
+    if (ball.hitTestElement(this.paddle)) {
+      ball.bottom = this.paddle.top;
+
+      var dx = ball.x - this.paddle.x;
+      ball.direction.x = dx;
+      ball.direction.y = -80;
+      ball.direction.normalize();
+
+      // speed up
+      this.ballSpeed += 1;
+      if (this.ballSpeed > MAX_BALL_SPEED) {
+        this.ballSpeed = MAX_BALL_SPEED;
+      }
+
+      // コンボ数をリセット
+      this.combo = 0;
+    }
+
+    this.group.children.some(function(block) {
+      // ヒット
+      if (ball.hitTestElement(block)) {
+        var dq = Vector2.sub(ball, block);
+
+        if (Math.abs(dq.x) < Math.abs(dq.y)) {
+          ball.reflectY();
+          if (dq.y >= 0) {
+            ball.top = block.bottom;
+          }
+          else {
+            ball.bottom = block.top;
+          }
+        }
+        else {
+          ball.reflectX();
+          if (dq.x >= 0) {
+            ball.left = block.right;
+          }
+          else {
+            ball.right = block.left;
+          }
+        }
+
+        block.remove();
+
+        this.combo += 1;
+        this.score += this.combo*100;
+
+        var c = ComboLabel(this.combo).addChildTo(this);
+        c.x = this.gridX.span(12) + Math.randint(-50, 50);
+        c.y = this.gridY.span(12) + Math.randint(-50, 50);
+
+        return true;
+      }
+    }, this);
+  },
+
+  gameclear: function() {
+    // add clear bonus
+    var bonus = 2000;
+    this.score += bonus;
+
+    // add time bonus
+    var seconds = (this.time/1000).floor();
+    var bonusTime = Math.max(60*10-seconds, 0);
+    this.score += (bonusTime*10);
+
+    this.gameover(1);
+  },
+
+  gameover: function(clear_flag) {
+    this.exit({
+      score: this.score,
+      clear: clear_flag,
+    });
+  },
+
+  _accessor: {
+    score: {
+      get: function() {
+        return this._score;
+      },
+      set: function(v) {
+        this._score = v;
+        this.scoreLabel.text = v;
+      },
+    },
+  }
+
+});
+
+/*
+ * ブロック
+ */
+phina.define('Block', {
+  superClass: 'RectangleShape',
+
+  init: function(angle) {
+    this.superInit({
+      width: BLOCK_SIZE,
+      height: BLOCK_SIZE,
+      fill: 'hsl({0}, 80%, 60%)'.format(angle || 0),
+      stroke: null,
+      cornerRadius: 8,
+    });
+  },
+});
+
+phina.define('ImageBlock', {
+  superClass: 'Sprite',
+
+  init: function(x, y, cx, cy) {
+    this.superInit('mira_cloth');
+    let offsetx = cx - 0.5 * this.width;
+    let offsety = cy - 0.5 * this.height;
+    this.srcRect.x = x - offsetx - 0.5 * BLOCK_SIZE;
+    this.srcRect.y = y - offsety - 0.5 * BLOCK_SIZE;
+    this.srcRect.width = BLOCK_SIZE;
+    this.srcRect.height = BLOCK_SIZE;
+    this.setSize(BLOCK_SIZE, BLOCK_SIZE);
+  },
+
+  check_visible: function() {
+    if (((this.srcRect.x + BLOCK_SIZE) < minmax_xy[0][0]) || (this.srcRect.x > (minmax_xy[0][1] + CHECK_GRID_SIZE))) {
+      return false;
+    }
+    if (((this.srcRect.y + BLOCK_SIZE) < minmax_xy[1][0]) || (this.srcRect.y > (minmax_xy[1][1] + CHECK_GRID_SIZE))) {
+      return false;
+    }
+    for (let i = 0; i < block_pos_list.length; i++) {
+      let x = block_pos_list[i][0];
+      let y = block_pos_list[i][1];
+      if ((x <= (this.srcRect.x + BLOCK_SIZE)) && ((x + CHECK_GRID_SIZE) >= this.srcRect.x) && (y <= (this.srcRect.y + BLOCK_SIZE)) && ((y + CHECK_GRID_SIZE) >= this.srcRect.y)) {
+        return true;
+      }
+    }
+    return false;
+  },
+});
+
+/*
+ * ボール
+ */
+phina.define('Ball', {
+  superClass: 'CircleShape',
+
+  init: function() {
+    this.superInit({
+      radius: BALL_RADIUS,
+      fill: 'red',
+      stroke: null,
+      cornerRadius: 8,
+    });
+
+    this.speed = 0;
+    this.direction = Vector2(1, -1).normalize();
+  },
+
+  move: function() {
+    this.x += this.direction.x;
+    this.y += this.direction.y;
+  },
+
+  reflectX: function() {
+    this.direction.x *= -1;
+  },
+  reflectY: function() {
+    this.direction.y *= -1;
+  },
+});
+
+/*
+ * パドル
+ */
+phina.define('Paddle', {
+  superClass: 'RectangleShape',
+  init: function() {
+    this.superInit({
+      width: PADDLE_WIDTH,
+      height: PADDLE_HEIGHT,
+      fill: '#eee',
+      stroke: null,
+      cornerRadius: 8,
+    });
+  },
+
+  hold: function(ball) {
+    this.ball = ball;
+  },
+
+  release: function() {
+    this.ball = null;
+  },
+
+  update: function() {
+    if (this.ball) {
+      this.ball.x = this.x;
+      this.ball.y = this.top-this.ball.radius;
+    }
+  }
+});
+
+/*
+ * コンボラベル
+ */
+phina.define('ComboLabel', {
+  superClass: 'Label',
+  init: function(num) {
+    this.superInit(num + ' combo!');
+
+    this.stroke = 'white';
+    this.strokeWidth = 8;
+
+    // 数によって色とサイズを分岐
+    if (num < 5) {
+      this.fill = 'hsl(40, 60%, 60%)';
+      this.fontSize = 16;
+    }
+    else if (num < 10) {
+      this.fill = 'hsl(120, 60%, 60%)';
+      this.fontSize = 32;
+    }
+    else {
+      this.fill = 'hsl(220, 60%, 60%)';
+      this.fontSize = 48;
+    }
+
+    // フェードアウトして削除
+    this.tweener
+      .by({
+        alpha: -1,
+        y: -50,
+      })
+      .call(function() {
+        this.remove();
+      }, this)
+      ;
+  },
+});
+
+phina.define('MyTitleScene', {
+  superClass: 'DisplayScene',
+  /**
+   * @constructor
+   */
+  init: function(params) {
+    this.superInit(params);
+
+    params = ({}).$safe(params, phina.game.TitleScene.defaults);
+
+    this.backgroundColor = params.backgroundColor;
+    Sprite('mira_smile').addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
+    Sprite('mira_cloth').addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
+
+    this.fromJSON({
+      children: {
+        titleLabel: {
+          className: 'phina.display.Label',
+          arguments: {
+            text: params.title,
+            fill: params.fontColor,
+            stroke: false,
+            fontSize: 64,
+            shadow: 'black',
+            shadowBlur: 10,
+          },
+          x: this.gridX.center(),
+          y: this.gridY.span(8),
+        }
+      }
+    });
+
+    if (params.exitType === 'touch') {
+      this.fromJSON({
+        children: {
+          touchLabel: {
+            className: 'phina.display.Label',
+            arguments: {
+              text: "TOUCH START",
+              fill: params.fontColor,
+              stroke: false,
+              fontSize: 32,
+              shadow: 'black',
+              shadowBlur: 10,
+            },
+            x: this.gridX.center(),
+            y: this.gridY.span(12),
+          },
+        },
+      });
+
+      this.on('pointend', function() {
+        this.exit();
+      });
+    }
+  },
+
+  _static: {
+    defaults: {
+      title: 'phina.js games',
+      message: '',
+      width: 640,
+      height: 960,
+
+      fontColor: 'white',
+      backgroundColor: 'hsl(200, 80%, 64%)',
+      backgroundImage: '',
+
+      exitType: 'touch',
+    },
+  },
+
+});
+
+phina.define('MyResultScene', {
+  superClass: 'DisplayScene',
+  /**
+   * @constructor
+   */
+  init: function(params) {
+    this.superInit(params);
+
+    params = ({}).$safe(params, phina.game.ResultScene.defaults);
+    
+    var message = "Game Over";
+
+    if (params.clear == 1) {
+      this.mira_shame = Sprite('mira_shame').addChildTo(this).setPosition(this.gridX.center(), this.gridY.center());
+      message = "Game Clear!";
+    } else {
+      this.mira_shame = Sprite('mira_shobon').addChildTo(this).setPosition(this.gridX.center(), this.gridY.span(6));
+    }
+
+
+    this.backgroundColor = params.backgroundColor;
+
+    this.fromJSON({
+      children: {
+      /*
+        scoreText: {
+          className: 'phina.display.Label',
+          arguments: {
+            text: 'score',
+            fill: params.fontColor,
+            stroke: null,
+            fontSize: 48,
+          },
+          x: this.gridX.span(8),
+          y: this.gridY.span(4),
+        },
+        scoreLabel: {
+          className: 'phina.display.Label',
+          arguments: {
+            text: params.score+'',
+            fill: params.fontColor,
+            stroke: null,
+            fontSize: 72,
+          },
+          x: this.gridX.span(8),
+          y: this.gridY.span(6),
+        },
+      */
+
+        messageLabel: {
+          className: 'phina.display.Label',
+          arguments: {
+            text: message,
+            fill: params.fontColor,
+            stroke: null,
+            fontSize: 48,
+            shadow: 'black',
+            shadowBlur: 10,
+          },
+          x: this.gridX.center(),
+          y: this.gridY.span(10),
+        },
+
+        shareButton: {
+          className: 'phina.ui.Button',
+          arguments: [{
+            text: '★',
+            width: 128,
+            height: 128,
+            fontColor: params.fontColor,
+            fontSize: 50,
+            cornerRadius: 64,
+            fill: 'rgba(240, 240, 240, 0.5)',
+            // stroke: '#aaa',
+            // strokeWidth: 2,
+          }],
+          x: this.gridX.center(-3),
+          y: this.gridY.span(12),
+        },
+        playButton: {
+          className: 'phina.ui.Button',
+          arguments: [{
+            text: '▶',
+            width: 128,
+            height: 128,
+            fontColor: params.fontColor,
+            fontSize: 50,
+            cornerRadius: 64,
+            fill: 'rgba(240, 240, 240, 0.5)',
+            // stroke: '#aaa',
+            // strokeWidth: 2,
+          }],
+          x: this.gridX.center(3),
+          y: this.gridY.span(12),
+
+          interactive: true,
+          onpush: function() {
+            this.exit();
+          }.bind(this),
+        },
+      }
+    });
+
+    if (params.exitType === 'touch') {
+      this.on('pointend', function() {
+        this.exit();
+      });
+    }
+
+    this.shareButton.onclick = function() {
+      var text = 'Score: {0}\n{1}'.format(params.score, message);
+      var url = phina.social.Twitter.createURL({
+        text: text,
+        hashtags: params.hashtags,
+        url: params.url,
+      });
+      window.open(url, 'share window', 'width=480, height=320');
+    };
+  },
+
+  _static: {
+    defaults: {
+      score: 16,
+
+      message: 'this is phina.js project.',
+      hashtags: 'phina_js,game,javascript',
+      url: phina.global.location && phina.global.location.href,
+
+      width: 640,
+      height: 960,
+
+      fontColor: 'white',
+      backgroundColor: 'hsl(200, 80%, 64%)',
+      backgroundImage: '',
+    },
+  },
+
+});
+
+phina.main(function() {
+  var app = GameApp({
+    title: 'ミラ・クズス',
+    assets: ASSETS,
+    startLabel: 'title',
+    width: SCREEN_WIDTH,
+    height: SCREEN_HEIGHT,
+    backgroundColor: '#5d5',
+    autoPause: false,
+    debug: false,
+    scenes: [
+    {
+      className: 'MyTitleScene',
+      label: 'title',
+      nextLabel: 'game',
+    },
+    {
+      className: 'MainScene',
+      label: 'game',
+      nextLabel: 'score',
+    },
+    {
+      className: 'MyResultScene',
+      label: 'score',
+      nextLabel: 'title',
+    },
+    ],
+
+  });
+
+//  app.enableStats();
+
+  app.run();
+});
+
+
+
+</script>
