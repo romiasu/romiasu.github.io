@@ -10,6 +10,10 @@ var ASSETS = {
     'shiena2' : "shiena/shiena_2.png",
     'shiena3' : "shiena/shiena_3.png",
     'shiena4' : "shiena/shiena_4.png",
+    'tuna1' : "tuna/tuna_1.png",
+    'tuna2' : "tuna/tuna_2.png",
+    'tuna3' : "tuna/tuna_3.png",
+    'tuna4' : "tuna/tuna_4.png",
   },
 };
 
@@ -105,6 +109,50 @@ phina.define('ShienaScene', {
   },
 });
 
+phina.define('TunaScene', {
+  superClass: 'DisplayScene',
+  init: function() {
+    this.superInit({
+      width: SCREEN_WIDTH,
+      height: SCREEN_HEIGHT,
+    });
+    var bg = DisplayElement().addChildTo(this);
+
+    this.dance1 = Sprite('tuna1').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.dance2 = Sprite('tuna2').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.dance3 = Sprite('tuna3').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.dance4 = Sprite('tuna4').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.cnt = 0;
+    this.on('pointend', function() {
+      this.exit();
+    });
+  },
+
+  hide_all: function() {
+    this.dance1.hide();
+    this.dance2.hide();
+    this.dance3.hide();
+    this.dance4.hide();
+  },
+
+  update: function() {
+    this.hide_all();
+    if ((this.cnt < 8) && (this.cnt % 2 == 0)) {
+      this.dance1.show();
+    } else if ((this.cnt < 8) && (this.cnt % 2 == 1)) {
+      this.dance2.show();
+    } else if ((this.cnt < 16) && (this.cnt % 2 == 0)) {
+      this.dance3.show();
+    } else if ((this.cnt < 16) && (this.cnt % 2 == 1)) {
+      this.dance4.show();
+    } else {
+      this.exit();
+    }
+    //this.cnt = (this.cnt + 1) % 16;
+    this.cnt = this.cnt + 1;
+  },
+});
+
 phina.main(function() {
   var app = GameApp({
     query: '#mycanvas',
@@ -123,6 +171,11 @@ phina.main(function() {
       {
         className: 'ShienaScene',
         label: 'shiena',
+        nextLabel: 'tuna',
+      },
+      {
+        className: 'TunaScene',
+        label: 'tuna',
         nextLabel: 'mira',
       },
     ],
