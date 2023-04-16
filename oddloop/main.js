@@ -14,6 +14,10 @@ var ASSETS = {
     'tuna2' : "tuna/tuna_2.png",
     'tuna3' : "tuna/tuna_3.png",
     'tuna4' : "tuna/tuna_4.png",
+    'chiko1' : "chiko/chiko_1.png",
+    'chiko2' : "chiko/chiko_2.png",
+    'chiko3' : "chiko/chiko_3.png",
+    'chiko4' : "chiko/chiko_4.png",
   },
 };
 
@@ -153,6 +157,50 @@ phina.define('TunaScene', {
   },
 });
 
+phina.define('ChikoScene', {
+  superClass: 'DisplayScene',
+  init: function() {
+    this.superInit({
+      width: SCREEN_WIDTH,
+      height: SCREEN_HEIGHT,
+    });
+    var bg = DisplayElement().addChildTo(this);
+
+    this.dance1 = Sprite('chiko1').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.dance2 = Sprite('chiko2').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.dance3 = Sprite('chiko3').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.dance4 = Sprite('chiko4').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.cnt = 0;
+    this.on('pointend', function() {
+      this.exit();
+    });
+  },
+
+  hide_all: function() {
+    this.dance1.hide();
+    this.dance2.hide();
+    this.dance3.hide();
+    this.dance4.hide();
+  },
+
+  update: function() {
+    this.hide_all();
+    if ((this.cnt < 8) && (this.cnt % 2 == 0)) {
+      this.dance1.show();
+    } else if ((this.cnt < 8) && (this.cnt % 2 == 1)) {
+      this.dance2.show();
+    } else if ((this.cnt < 16) && (this.cnt % 2 == 0)) {
+      this.dance3.show();
+    } else if ((this.cnt < 16) && (this.cnt % 2 == 1)) {
+      this.dance4.show();
+    } else {
+      this.exit();
+    }
+    //this.cnt = (this.cnt + 1) % 16;
+    this.cnt = this.cnt + 1;
+  },
+});
+
 phina.main(function() {
   var app = GameApp({
     query: '#mycanvas',
@@ -176,6 +224,11 @@ phina.main(function() {
       {
         className: 'TunaScene',
         label: 'tuna',
+        nextLabel: 'chiko',
+      },
+      {
+        className: 'ChikoScene',
+        label: 'chiko',
         nextLabel: 'mira',
       },
     ],
