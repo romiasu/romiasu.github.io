@@ -18,6 +18,10 @@ var ASSETS = {
     'chiko2' : "chiko/chiko_2.png",
     'chiko3' : "chiko/chiko_3.png",
     'chiko4' : "chiko/chiko_4.png",
+    'hakana1' : "hakana/hakana_1.png",
+    'hakana2' : "hakana/hakana_2.png",
+    'hakana3' : "hakana/hakana_3.png",
+    'hakana4' : "hakana/hakana_4.png",
   },
 };
 
@@ -201,6 +205,50 @@ phina.define('ChikoScene', {
   },
 });
 
+phina.define('HakanaScene', {
+  superClass: 'DisplayScene',
+  init: function() {
+    this.superInit({
+      width: SCREEN_WIDTH,
+      height: SCREEN_HEIGHT,
+    });
+    var bg = DisplayElement().addChildTo(this);
+
+    this.dance1 = Sprite('hakana1').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.dance2 = Sprite('hakana2').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.dance3 = Sprite('hakana3').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.dance4 = Sprite('hakana4').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.cnt = 0;
+    this.on('pointend', function() {
+      this.exit();
+    });
+  },
+
+  hide_all: function() {
+    this.dance1.hide();
+    this.dance2.hide();
+    this.dance3.hide();
+    this.dance4.hide();
+  },
+
+  update: function() {
+    this.hide_all();
+    if ((this.cnt < 8) && (this.cnt % 2 == 0)) {
+      this.dance1.show();
+    } else if ((this.cnt < 8) && (this.cnt % 2 == 1)) {
+      this.dance2.show();
+    } else if ((this.cnt < 16) && (this.cnt % 2 == 0)) {
+      this.dance3.show();
+    } else if ((this.cnt < 16) && (this.cnt % 2 == 1)) {
+      this.dance4.show();
+    } else {
+      this.exit();
+    }
+    //this.cnt = (this.cnt + 1) % 16;
+    this.cnt = this.cnt + 1;
+  },
+});
+
 phina.main(function() {
   var app = GameApp({
     query: '#mycanvas',
@@ -229,6 +277,11 @@ phina.main(function() {
       {
         className: 'ChikoScene',
         label: 'chiko',
+        nextLabel: 'hakana',
+      },
+      {
+        className: 'HakanaScene',
+        label: 'hakana',
         nextLabel: 'mira',
       },
     ],
