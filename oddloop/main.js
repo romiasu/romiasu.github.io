@@ -22,6 +22,10 @@ var ASSETS = {
     'hakana2' : "hakana/hakana_2.png",
     'hakana3' : "hakana/hakana_3.png",
     'hakana4' : "hakana/hakana_4.png",
+    'kurine1' : "kurine/kurine_1.png",
+    'kurine2' : "kurine/kurine_2.png",
+    'kurine3' : "kurine/kurine_3.png",
+    'kurine4' : "kurine/kurine_4.png",
   },
 };
 
@@ -249,6 +253,50 @@ phina.define('HakanaScene', {
   },
 });
 
+phina.define('KurineScene', {
+  superClass: 'DisplayScene',
+  init: function() {
+    this.superInit({
+      width: SCREEN_WIDTH,
+      height: SCREEN_HEIGHT,
+    });
+    var bg = DisplayElement().addChildTo(this);
+
+    this.dance1 = Sprite('kurine1').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.dance2 = Sprite('kurine2').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.dance3 = Sprite('kurine3').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.dance4 = Sprite('kurine4').addChildTo(bg).setPosition(this.gridX.center(), this.gridY.center()).hide();
+    this.cnt = 0;
+    this.on('pointend', function() {
+      this.exit();
+    });
+  },
+
+  hide_all: function() {
+    this.dance1.hide();
+    this.dance2.hide();
+    this.dance3.hide();
+    this.dance4.hide();
+  },
+
+  update: function() {
+    this.hide_all();
+    if ((this.cnt < 8) && (this.cnt % 2 == 0)) {
+      this.dance1.show();
+    } else if ((this.cnt < 8) && (this.cnt % 2 == 1)) {
+      this.dance2.show();
+    } else if ((this.cnt < 16) && (this.cnt % 2 == 0)) {
+      this.dance3.show();
+    } else if ((this.cnt < 16) && (this.cnt % 2 == 1)) {
+      this.dance4.show();
+    } else {
+      this.exit();
+    }
+    //this.cnt = (this.cnt + 1) % 16;
+    this.cnt = this.cnt + 1;
+  },
+});
+
 phina.main(function() {
   var app = GameApp({
     query: '#mycanvas',
@@ -282,6 +330,11 @@ phina.main(function() {
       {
         className: 'HakanaScene',
         label: 'hakana',
+        nextLabel: 'kurine',
+      },
+      {
+        className: 'KurineScene',
+        label: 'kurine',
         nextLabel: 'mira',
       },
     ],
