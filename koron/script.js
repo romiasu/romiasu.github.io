@@ -27,7 +27,7 @@ function drawAll (x, y) {
     ctx1.drawImage(wallImg, 0, 0, canvas1.width, canvas1.height);
 
     ctx1.globalCompositeOperation = 'destination-over';
-    if (x > -40 && x < 0 && y > 30 && y < 70) {
+    if (x > -50 && x < -10 && y > 50 && y < 90) {
         ctx1.drawImage(tereImg, 0, 0, canvas1.width, canvas1.height);
     } else {
         ctx1.drawImage(shienaImg, 0, 0, canvas1.width, canvas1.height);
@@ -64,9 +64,9 @@ function first_draw () {
     hienaImg = new Image();
     hienaImg.src = './koron2.png';
     maskImg = new Image();
-    maskImg.src = './mask.png';
+    maskImg.src = './mask2.png';
     handImg = new Image();
-    handImg.src = './hand.png';
+    handImg.src = './hand2.png';
     tereImg = new Image();
     tereImg.src = './koron3.png';
 
