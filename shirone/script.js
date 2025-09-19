@@ -195,6 +195,10 @@ phina.define("MainScene", {
         } else if (this.state_cnt == 3) {
             if (this.shirone.tweener.playing == false) {
                 this.switch_face(0);
+                this.shirone.tweener.clear()
+                .by({y: -5}, 500, "swing")
+                .to({y: this.gridY.center()}, 500, "swing")
+                .setLoop(true).play();
 
                 this.state_cnt = 2;
             }
